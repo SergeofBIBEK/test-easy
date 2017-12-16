@@ -11,6 +11,8 @@
     "deploy": "npm run build && firebase deploy"
   },
   "dependencies": {
+    "firebase": "^4.8.0",
+    "firebaseui": "^2.5.1",
     "vue": "^2.5.2",
     "vue-codemirror-lite": "^1.0.3",
     "vue-router": "^3.0.1"

@@ -1,6 +1,5 @@
 <template>
   <div id="app">
-    <!--Navigation Goes Here!-->
     <img src="./assets/logo.png">
     <router-view/>
   </div>
@@ -13,4 +12,5 @@ export default {
 </script>
 
 <style>
+
 </style>
