@@ -1,19 +1,34 @@
 <template>
 <div>
-	<button @click="logout">Logout</button>{{user.displayName}}
-	<select v-model="selectedTheme">
-		<option v-for="theme in themes" :value="theme" :key="theme">{{theme}}</option>
-	</select>
-	Word Wrap?<input type="checkbox" v-model="wordWrap"> <button v-if="url" @click="shipToFirebase">Save</button>
-	<codemirror @change="updateCode" :value="code" :options="options"></codemirror>
+	<Header :user="user" :projectName="currentFile"/>
+	<div style="height: 50px; position: relative; top: 0; left: 0"></div>
+	<div id="contentBody">
+		<div id="codeMirrorHolder">
+			<label>Theme: 
+				<select v-model="selectedTheme">
+					<option v-for="theme in themes" :value="theme" :key="theme">{{theme}}</option>
+				</select>
+			</label>
+			<label>Word Wrap?<input type="checkbox" v-model="wordWrap"></label>
+			<input v-model="enteredFileName" type="text" placeholder="Name">
+			<button v-if="url" @click="shipToFirebase">Save</button><button @click="openLoadModal">Files</button>
+			<br />
+			<codemirror @change="updateCode" :value="code" :options="options"></codemirror>
+		</div>
+		<div id="previewHolder" v-if="currentFile">
+			<router-link :to="`${url}/${currentFile}`">{{`${url}/${currentFile}`}}</router-link>
+			<iframe style="height: 100%; width: 100%; border: 1px solid #000;" :src="`${url}/${currentFile}`"></iframe>
+		</div>
+	</div>
 	<div id="setupURL" v-if="!url">
 		<div>
 			<p>You must create a unique username before continuing.</p>
-			<label>Your Unique Username: <input v-model="enteredURL" type="text"></label>
+			<label>Your Unique Username: <input v-model="enteredURL" type="text" placeholder="Unique Username"></label>
 			<button @click="saveURL">Save</button>
 			<span style="color: #F00;">Cannot be changed later!</span>
 		</div>
 	</div>
+	<Load v-if="loadModalOpen" :url="url" :close="closeLoadModal.bind(this)" :user="user" :setCurrentFile="setCurrentFile.bind(this)" />
 </div>
 </template>
 
@@ -21,22 +36,30 @@
 import firebase from "firebase";
 import { codemirror } from "vue-codemirror-lite";
 require("codemirror/mode/htmlmixed/htmlmixed");
+require("codemirror/addon/edit/matchbrackets.js");
+require("codemirror/addon/edit/closebrackets.js");
+require("codemirror/addon/edit/matchtags.js");
+require("codemirror/addon/edit/closetag.js");
+require("codemirror/addon/search/match-highlighter.js");
+require("codemirror/addon/selection/active-line.js");
+
+import Header from "./Header.vue";
+import Load from "./Load.vue";
 
 let authVue = {
 	name:"CodeMirror",
 	data () {
 			return {
 				selectedTheme: "mdn-like",
-				lineNumbers: true,
-				highlightSelectionMatches: true,
-				styleActiveLine: true,
-				autoCloseBrackets: true,
-				wordWrap: false,
+				currentFile: '',
+				enteredFileName: '',
 				user: {},
-				url: '',
+				url: 'temp',
 				enteredURL: '',
 				signedIn: false,
-				code: '<html>\n  <head>\n    <style>\n      .app {\n        color: red;\n      }\n    </style>\n  </head>\n  <body>\n    <script>\n      var myel = document.getElementById("myEl"); \n    <\/script>\n  </body>\n</html>',
+				wordWrap: false,
+				loadModalOpen: false,
+				code: '<html>\n  <head>\n\n  </head>\n\n  <body>\n\n    <!--Tag Goes Here-->\n\n  </body>\n</html>',
 				themes: [
 						"none",
 						"3024-day",
@@ -92,11 +115,59 @@ let authVue = {
 					return {
 						mode: "htmlmixed",
 						theme: this.selectedTheme,
-						lineWrapping: this.wordWrap
+						lineWrapping: this.wordWrap,
+						lineNumbers: true,
+						highlightSelectionMatches: true,
+						styleActiveLine: true,
+						matchBrackets: true,
+						autoCloseBrackets: true,
+						matchTags: true,
+						autoCloseTags: true,
 					}
 				},
+				filePath: function () {
+					return `${this.url}/${this.enteredFileName}.html`;
+				}
 		},
 		methods: {
+			closeLoadModal: function () {
+				this.loadModalOpen = false;
+			},
+			openLoadModal: function () {
+				this.loadModalOpen = true;
+			},
+			savePageToList: function (fileName) {
+				let userRef = firebase.database().ref(this.user.uid);
+				let pagesRef = userRef.child('pages')
+
+				pagesRef.once('value', (snapshot) => {
+					let list = snapshot.val() || [];
+
+					if (list.indexOf(fileName) === -1) {
+						list.push(fileName);
+						userRef.update({pages: list});
+					}
+				})
+			},
+			setCurrentFile: function (fileName) {
+				this.currentFile = fileName;
+				this.enteredFileName = fileName;
+
+				firebase.storage().ref().child(`${this.url}/${fileName}.html`).getDownloadURL().then(
+					(url) => {
+						var xhr = new XMLHttpRequest();
+						xhr.responseType = '';
+						xhr.onload = (event) => {
+							var blob = xhr.response;
+							this.code = blob;
+						};
+						xhr.open('GET', url);
+						xhr.send();
+					}
+				);
+
+				this.loadModalOpen = false;
+			},
 			saveURL: function (event) {
 				if (!this.enteredURL) {
 					return;
@@ -126,21 +197,49 @@ let authVue = {
 			updateCode: function (event) {
 				this.code = event;
 			},
-			logout: function (event) {
-				firebase.auth().signOut();
-			},
 			shipToFirebase: function (event) {
-				let aFileParts = [this.code];
-				console.log(this.code);
-				let oMyBlob = new Blob(aFileParts, {type : 'text/html'});
+				if (!this.enteredFileName) {
+					return;
+				}
+
+				let code = [this.code];
+				let file = new Blob(code, {type : 'text/html'});
+
+				firebase.storage().ref().child(this.filePath).getDownloadURL().then(
+					(exists) => {
+						//Ask if they want to overwrite.
+						if (confirm("File already exists, do you want to overwrite? OK: Yes, Cancel: No")) {
+							firebase.storage().ref().child(this.filePath).put(file).then(
+								(snapshot) => {
+									this.setCurrentFile(this.enteredFileName);
+									this.savePageToList(this.enteredFileName);
+								},
+								(error) => {
+									alert(error);
+								}
+							);
+						}
+					},
+					(error) => { //file not found, go ahead and upload
+						firebase.storage().ref().child(this.filePath).put(file).then(
+							(snapshot) => {
+								this.setCurrentFile(this.enteredFileName);
+								this.savePageToList(this.enteredFileName);
+							},
+							(error) => {
+								alert(error);
+							}
+						);
+					}
+				);
 				
-				firebase.storage().ref().child(`${this.url}/test.html`).put(oMyBlob).then(function(snapshot) {
-					console.log("file uploaded", snapshot);
-  			});
+				
 			}
 		},
 		components: {
-			codemirror
+			codemirror,
+			Header,
+			Load
 		},
 		mounted() {
 			firebase.auth().onAuthStateChanged((user) => {
@@ -236,5 +335,28 @@ export default authVue;
 		align-items: center;
 		justify-content: space-around;
 		flex-direction: column;
+	}
+
+	#contentBody {
+		display: flex;
+		justify-content: space-around;
+		align-items: center;
+		flex-wrap: wrap;
+	}
+
+	#codeMirrorHolder {
+		width: 450px;
+		height: 80vh;
+	}
+
+	#previewHolder {
+		width: 450px;
+		height: 80vh;
+	}
+
+	.CodeMirror {
+		height: 90%;
+		width: 100%;
+		border: 1px solid #000;
 	}
 </style>
