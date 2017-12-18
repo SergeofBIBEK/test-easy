@@ -24,7 +24,7 @@ new Vue({
       firebase.auth().onAuthStateChanged((user) => {
         if (this.$route.name !== "ViewPage") {
           if(user) {
-            this.$router.push('/cm');
+            this.$router.push('/editor');
           } else {
             this.$router.push('/auth');
           }

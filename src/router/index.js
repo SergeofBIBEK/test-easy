@@ -26,7 +26,7 @@ let router = new Router({
       component: Auth
     },
     {
-      path: '/cm',
+      path: '/editor',
       name: 'CodeMirror',
       component: CodeMirror,
     }

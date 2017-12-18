@@ -12,7 +12,7 @@ export default {
 	name: 'Auth',
 	mounted() {
     var uiConfig = {
-      signInSuccessUrl: '/cm',
+      signInSuccessUrl: '/editor',
       signInOptions: [
         firebase.auth.GoogleAuthProvider.PROVIDER_ID,
         firebase.auth.EmailAuthProvider.PROVIDER_ID
