@@ -2,7 +2,7 @@
 <div>
 	{{this.$route.params.user}}
 	{{this.$route.params.id}}
-	<iframe :src="pageSrc" ref="view" class="output"></iframe>
+	<iframe :src="pageSrc" class="output"></iframe>
 </div>
 </template>
 
@@ -16,14 +16,10 @@ export default {
 			pageSrc: ''
 		};
 	},
-	watch: {
-		pageSrc: function (val) {
-			document.title = this.$refs.view.contentDocument.title;
-		}
-	},
 	mounted() {
 		
 		let { user, id } = this.$route.params;
+		document.title = id;
 		let ref = firebase.storage().ref(`${user}/${id}.html`).getDownloadURL().then(
 			(url) => {
 				this.pageSrc = url;
