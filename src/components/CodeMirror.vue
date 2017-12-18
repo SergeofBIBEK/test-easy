@@ -241,11 +241,25 @@ let authVue = {
 			Header,
 			Load
 		},
+		watch: {
+			selectedTheme: function (val) {
+				firebase.database().ref(this.user.uid).update({theme: val});
+			},
+			wordWrap: function (val) {
+				firebase.database().ref(this.user.uid).update({wrap: val});
+			}
+		},
 		mounted() {
 			firebase.auth().onAuthStateChanged((user) => {
 				if (user) {
 					this.user = user;
 					this.signedIn = true;
+
+					firebase.database().ref(user.uid).once('value', (snapshot) => {
+						let snap = snapshot.val();
+						this.selectedTheme = snap.theme || 'mdn-like';
+						this.wordWrap =  snap.wrap || false;
+					});
 
 					firebase.database().ref(`${user.uid}/url`).once('value', (snapshot) => {
 						let url = snapshot.val();
