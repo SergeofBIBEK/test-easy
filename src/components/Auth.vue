@@ -1,5 +1,6 @@
 <template>
 	<div id="auth">
+    <img src="../assets/logo.png">
 		<div id="firebaseui-auth-container"></div>
 	</div>
 </template>
@@ -26,4 +27,15 @@ export default {
 
 <style>
 	@import "firebaseui/dist/firebaseui.css";
+
+  #auth {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  img {
+    height: 250px;
+  }
 </style>
