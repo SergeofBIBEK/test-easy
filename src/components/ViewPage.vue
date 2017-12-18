@@ -2,7 +2,7 @@
 <div>
 	{{this.$route.params.user}}
 	{{this.$route.params.id}}
-	<iframe :src="pageSrc" class="output"></iframe>
+	<iframe :src="pageSrc" ref="view" class="output"></iframe>
 </div>
 </template>
 
@@ -15,6 +15,11 @@ export default {
 		return {
 			pageSrc: ''
 		};
+	},
+	watch: {
+		pageSrc: function (val) {
+			document.title = this.$refs.view.contentDocument.title;
+		}
 	},
 	mounted() {
 		

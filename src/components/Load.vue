@@ -5,7 +5,7 @@
 			<label>Filter: <input v-model="filter" type="text"></label>
 			<ul>
 				<li v-for="page in filteredList" :key="page">
-					<span>{{page}}</span>
+					<span><router-link :to="`${url}/${page}`">{{page}}</router-link></span>
 					<button :page="page" @click="loadThis">Load</button>
 					<button :page="page" @click="deleteThis">Delete</button>
 				</li>
@@ -88,6 +88,13 @@ export default {
 	ul {
 		height: 70%;
 		overflow: auto;
+	}
+
+	li {
+		border: 1px solid #000;
+		margin-top: 5px;
+		margin-right: 25px;
+		padding: 5px;
 	}
 
 	#closeButton {

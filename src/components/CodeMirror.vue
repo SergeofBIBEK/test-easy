@@ -16,7 +16,8 @@
 			<codemirror @change="updateCode" :value="code" :options="options"></codemirror>
 		</div>
 		<div id="previewHolder" v-if="currentFile">
-			<router-link :to="`${url}/${currentFile}`">{{`${url}/${currentFile}`}}</router-link>
+			<p>Short URL: <a :href="shortURL">{{shortURL}}</a></p>
+			<p>Long URL (Use if short isn't working.): <a :href="fullURL">{{fullURL}}</a></p>
 			<iframe style="height: 100%; width: 100%; border: 1px solid #000;" :src="`${url}/${currentFile}`"></iframe>
 		</div>
 	</div>
@@ -56,6 +57,7 @@ let authVue = {
 				user: {},
 				url: 'temp',
 				enteredURL: '',
+				fullURL: '',
 				signedIn: false,
 				wordWrap: false,
 				loadModalOpen: false,
@@ -127,6 +129,9 @@ let authVue = {
 				},
 				filePath: function () {
 					return `${this.url}/${this.enteredFileName}.html`;
+				},
+				shortURL: function () {
+					return `https://test-easy.firebaseapp.com/${this.url}/${this.currentFile}`;
 				}
 		},
 		methods: {
@@ -163,6 +168,8 @@ let authVue = {
 						};
 						xhr.open('GET', url);
 						xhr.send();
+
+						this.fullURL = url;
 					}
 				);
 
